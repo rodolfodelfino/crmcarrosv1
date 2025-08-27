@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CRM de Carros • Usuário fixo + Formulário Público (sem backend)</title>
+  <style>
+    :root { --bg:#0f172a; --panel:#111827; --muted:#94a3b8; --text:#e5e7eb; --accent:#22c55e; --accent-2:#60a5fa; --danger:#ef4444; --warn:#f59e0b; --card:#0b1220; --chip:#1f2937; --border:#1f2937; }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,Arial;background:linear-gradient(180deg,#0b1220,#0f172a 30%,#0b1220 100%);color:var(--text)}
+    header{padding:20px;border-bottom:1px solid var(--border);background:rgba(15,23,42,.7);position:sticky;top:0;backdrop-filter:blur(8px);z-index:5}
+    h1{margin:0;font-size:20px;font-weight:700}
+    .wrap{max-width:1250px;margin:20px auto;padding:0 16px;display:grid;grid-template-columns:1fr 1fr;gap:20px}
+    .card{background:linear-gradient(180deg,var(--card),#0e1628);border:1px solid var(--border);border-radius:16px;padding:16px;box-shadow:0 10px 40px rgba(0,0,0,.35)}
+    .card h2{font-size:18px;margin:0 0 12px;display:flex;align-items:center;gap:8px}
+    .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+    label{font-size:12px;color:var(--muted);display:block;margin-bottom:6px}
+    input,select,textarea{width:100%;background:#0b1220;color:var(--text);border:1px solid var(--border);border-radius:10px;padding:10px;outline:none}
+    input:focus,select:focus,textarea:focus{border-color:var(--accent-2);box-shadow:0 0 0 3px rgba(96,165,250,.15)}
+    .row{display:flex;gap:10px;flex-wrap:wrap}
+    .btn{background:var(--accent-2);color:#071120;border:none;padding:10px 14px;border-radius:10px;cursor:pointer;font-weight:700;transition:transform .05s ease}
+    .btn:active{transform:translateY(1px)}
+    .btn.secondary{background:#1f2937;color:var(--text);border:1px solid var(--border)}
+    .btn.success{background:var(--accent);color:#072012}
+    .btn.warn{background:var(--warn);color:#201807}
+    .btn.danger{background:var(--danger);color:#200707}
+    .list{display:grid;gap:10px;margin-top:10px}
+    .item{border:1px solid var(--border);border-radius:12px;padding:10px;background:linear-gradient(180deg,#0e1628,#0b1220);display:grid;gap:8px}
+    .item .head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+    .muted{color:var(--muted);font-size:12px}
+    .chips{display:flex;flex-wrap:wrap;gap:6px}
+    .chip{background:var(--chip);color:#cbd5e1;font-size:12px;padding:4px 8px;border-radius:999px;border:1px solid var(--border)}
+    .matches{margin-top:6px;font-size:13px}
+    @media (max-width:1100px){.wrap{grid-template-columns:1fr}}
+    .kbd{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;padding:0 6px;border:1px solid var(--border);border-bottom-width:2px;border-radius:6px;font-size:12px;color:#cbd5e1;background:#0a1020}
+    .thumbs{display:flex;gap:6px;flex-wrap:wrap}
+    .thumb{width:74px;height:74px;border-radius:8px;border:1px solid var(--border);object-fit:cover}
+    .toolbar{display:flex;gap:8px;flex-wrap:wrap}
+    .stats{display:flex;gap:16px;font-size:12px;color:#cbd5e1;margin-top:6px}
+    .search{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+    .overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(2,6,23,.85);backdrop-filter:blur(6px);z-index:1000}
+    .login-card{background:linear-gradient(180deg,var(--card),#0e1628);border:1px solid var(--border);border-radius:16px;padding:20px;width:100%;max-width:420px;box-shadow:0 10px 40px rgba(0,0,0,.45)}
+    .login-card h2{margin:0 0 12px;font-size:18px}
+    .login-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+    .note{font-size:12px;color:var(--muted);margin-top:8px}
+    .qr-card{background:linear-gradient(180deg,var(--card),#0e1628);border:1px solid var(--border);border-radius:16px;padding:16px; width:95%; max-width:520px}
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+</head>
+<body>
+  <!-- LOGIN (usuário fixo) -->
+  <div id="loginView" class="overlay">
+    <div class="login-card">
+      <h2>🔐 Acesso</h2>
+      <label>Usuário (fixo)</label><input id="lgUser"/>
+      <label>Senha</label><input id="lgPass" type="password"/>
+      <div class="login-actions">
+        <button class="btn success" id="btnLogin">Entrar</button>
+      </div>
+      <div class="note">Usuário é validado no código. Senha inicial: <code>padrao1234</code> (o usuário pode trocá-la depois em <em>Conta</em>).</div>
+    </div>
+  </div>
+
+  <!-- APP ADMIN -->
+  <div id="app" style="display:none">
+    <header>
+      <div class="row" style="justify-content:space-between;align-items:center">
+        <h1>📇 CRM de Carros → WhatsApp • Excel • Fotos (Front‑End)</h1>
+        <div class="row">
+          <button class="btn secondary" id="btnFormLink">Formulário do Cliente (QR/Link)</button>
+          <button class="btn secondary" id="btnAccount">Conta</button>
+          <button class="btn" id="btnLogout">Sair</button>
+        </div>
+      </div>
+    </header>
+
+    <div class="wrap">
+      <!-- CLIENTES -->
+      <section class="card">
+        <h2>👤 Cadastrar cliente</h2>
+        <div class="grid-2">
+          <div><label>Nome*</label><input id="cliNome" placeholder="Ex: Ana Lima"/></div>
+          <div><label>WhatsApp* (DDI 55 + DDD + número — só dígitos)</label><input id="cliZap" placeholder="Ex: 5514997007069"/></div>
+        </div>
+        <div class="grid-3" style="margin-top:10px">
+          <div><label>Marca (ex: Toyota)</label><input id="cliMarca"/></div>
+          <div><label>Modelo (palavra-chave, ex: Etios)</label><input id="cliModelo"/></div>
+          <div><label>Tipo</label>
+            <select id="cliTipo"><option value="">Indiferente</option><option>Sedan</option><option>Hatch</option><option>SUV</option><option>Picape</option><option>Perua</option><option>Van</option></select>
+          </div>
+        </div>
+        <div class="grid-3" style="margin-top:10px">
+          <div><label>Ano mín.</label><input id="cliAnoMin" type="number" min="1980" max="2100" placeholder="Ex: 2015"/></div>
+          <div><label>Ano máx.</label><input id="cliAnoMax" type="number" min="1980" max="2100" placeholder="Ex: 2020"/></div>
+          <div><label>Preço máx. (R$)</label><input id="cliPrecoMax" type="number" min="0" step="500" placeholder="Ex: 50000"/></div>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <label style="display:flex;align-items:center;gap:8px;">
+            <input type="checkbox" id="cliJaComprou"/> Já comprou (não enviar mensagens)
+          </label>
+        </div>
+        <div class="row" style="margin-top:12px">
+          <button class="btn success" id="btnAddCliente">Salvar cliente</button>
+          <button class="btn secondary" id="btnLimparCliente">Limpar</button>
+        </div>
+
+        <div class="toolbar" style="margin-top:16px">
+          <button class="btn danger" id="btnApagarClientes" title="Apaga TODOS os clientes">Apagar clientes</button>
+        </div>
+
+        <div class="search">
+          <input id="buscaCliente" placeholder="Buscar cliente por nome/WhatsApp" />
+        </div>
+
+        <div class="stats" id="statsClientes"></div>
+        <h3 style="margin:10px 0 8px">Clientes salvos</h3>
+        <div id="listaClientes" class="list"></div>
+      </section>
+
+      <!-- CARROS -->
+      <section class="card">
+        <h2>🚘 Cadastrar carro no estoque</h2>
+        <div class="grid-3">
+          <div><label>Marca*</label><input id="carMarca" placeholder="Ex: Toyota"/></div>
+          <div><label>Modelo*</label><input id="carModelo" placeholder="Ex: Etios 1.5 XS"/></div>
+          <div><label>Tipo</label>
+            <select id="carTipo"><option>Sedan</option><option>Hatch</option><option>SUV</option><option>Picape</option><option>Perua</option><option>Van</option></select>
+          </div>
+        </div>
+        <div class="grid-3" style="margin-top:10px">
+          <div><label>Ano</label><input id="carAno" type="number" min="1980" max="2100" placeholder="Ex: 2017"/></div>
+          <div><label>Preço (R$)</label><input id="carPreco" type="number" min="0" step="500" placeholder="Ex: 49000"/></div>
+          <div><label>Link/ID interno (opcional)</label><input id="carLink" placeholder="Ex: URL do anúncio"/></div>
+        </div>
+        <div style="margin-top:10px">
+          <label>Fotos (até 10)
+            <span class="muted">• As fotos ficam salvas no navegador (IndexedDB). Não são enviadas para nenhum servidor.</span>
+          </label>
+          <input id="carFotos" type="file" accept="image/*" multiple />
+        </div>
+        <div class="row" style="margin-top:12px">
+          <button class="btn success" id="btnAddCarro">Salvar carro</button>
+          <button class="btn secondary" id="btnLimparCarro">Limpar</button>
+        </div>
+
+        <div class="toolbar" style="margin-top:16px">
+          <button class="btn danger" id="btnApagarCarros" title="Apaga TODOS os carros">Apagar carros</button>
+        </div>
+
+        <div class="search">
+          <input id="buscaCarro" placeholder="Buscar por marca/modelo" />
+          <input id="fPrecoMax" type="number" placeholder="Preço max" style="max-width:140px"/>
+          <select id="fTipo" style="max-width:140px"><option value="">Tipo</option><option>Sedan</option><option>Hatch</option><option>SUV</option><option>Picape</option><option>Perua</option><option>Van</option></select>
+        </div>
+
+        <div class="stats" id="statsCarros"></div>
+        <h3 style="margin:10px 0 8px">Estoque</h3>
+        <div class="muted">Ao salvar um carro, o sistema encontra clientes compatíveis. Use “WhatsApp (texto)” ou “Compartilhar c/ fotos”.</div>
+        <div id="listaCarros" class="list"></div>
+      </section>
+    </div>
+
+    <!-- BACKUP GLOBAL -->
+    <div class="wrap" style="margin-top:0">
+      <section class="card" style="grid-column: 1 / -1;">
+        <h2>💾 Backup</h2>
+        <div class="toolbar">
+          <button class="btn warn" id="btnExportExcel">Exportar Excel (Clientes + Carros)</button>
+          <label class="btn warn" for="impExcel">Importar Excel (substitui tudo)</label>
+          <input id="impExcel" type="file" accept=".xlsx,.xls" style="display:none" />
+          <button class="btn secondary" id="btnZipFotos">Exportar todas as FOTOS (.zip)</button>
+          <label class="btn secondary" for="impZipFotos">Importar FOTOS (.zip exportado aqui)</label>
+          <input id="impZipFotos" type="file" accept=".zip" style="display:none" />
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- MODAL CONTA -->
+  <div id="accountModal" class="overlay" style="display:none">
+    <div class="login-card">
+      <h2>⚙️ Conta</h2>
+      <div class="muted">Usuário (fixo): <strong id="accountUser"></strong></div>
+      <label>Senha atual</label><input id="pwCur" type="password"/>
+      <label>Nova senha</label><input id="pwNew" type="password"/>
+      <label>Confirmar nova senha</label><input id="pwNew2" type="password"/>
+      <div class="login-actions">
+        <button class="btn success" id="btnChangePw">Alterar senha</button>
+        <button class="btn secondary" id="btnCloseAccount">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL QR/LINK FORM -->
+  <div id="formModal" class="overlay" style="display:none">
+    <div class="qr-card">
+      <h2>📝 Formulário do Cliente</h2>
+      <div class="muted">Peça ao cliente para escanear o QR ou acesse o link abaixo.</div>
+      <div style="display:flex;justify-content:center;margin:12px 0">
+        <canvas id="qrCanvas" width="280" height="280" style="background:#fff;border-radius:12px;padding:8px"></canvas>
+      </div>
+      <div class="row" style="align-items:center">
+        <input id="formLinkInput" readonly />
+        <button class="btn" id="btnCopyForm">Copiar link</button>
+        <button class="btn secondary" id="btnCloseForm">Fechar</button>
+      </div>
+      <div class="note">Dica: imprima um cartaz com este QR para a mesa de atendimento.</div>
+    </div>
+  </div>
+
+  <!-- FORMULÁRIO PÚBLICO (modo coleta) -->
+  <div id="publicForm" style="display:none; max-width:720px; margin:24px auto; padding:0 16px;">
+    <div class="card">
+      <h2>📝 Cadastro de Interesse</h2>
+      <div class="muted" id="pfLoja">Preencha e envie para a loja.</div>
+      <div class="grid-2" style="margin-top:12px">
+        <div><label>Seu nome*</label><input id="pfNome" placeholder="Ex: João Silva"></div>
+        <div><label>Seu WhatsApp* (só dígitos, ex: 5598999999999)</label><input id="pfZap" placeholder="55DDDNÚMERO"></div>
+      </div>
+      <div class="grid-3" style="margin-top:10px">
+        <div><label>Marca</label><input id="pfMarca" placeholder="Ex: Toyota"></div>
+        <div><label>Modelo (palavra-chave)</label><input id="pfModelo" placeholder="Ex: Corolla"></div>
+        <div><label>Tipo</label>
+          <select id="pfTipo"><option value="">Indiferente</option><option>Sedan</option><option>Hatch</option><option>SUV</option><option>Picape</option><option>Perua</option><option>Van</option></select>
+        </div>
+      </div>
+      <div class="grid-3" style="margin-top:10px">
+        <div><label>Ano mín.</label><input id="pfAnoMin" type="number" min="1980" max="2100"></div>
+        <div><label>Ano máx.</label><input id="pfAnoMax" type="number" min="1980" max="2100"></div>
+        <div><label>Preço máx. (R$)</label><input id="pfPrecoMax" type="number" min="0" step="500"></div>
+      </div>
+      <div class="row" style="margin-top:14px">
+        <button class="btn success" id="pfEnviarZap">Enviar pelo WhatsApp</button>
+        <button class="btn" id="pfBaixarExcel">Baixar Excel (1 linha)</button>
+      </div>
+      <div class="note" style="margin-top:8px">Privacidade: seus dados não são salvos neste site; eles só serão enviados para a loja via WhatsApp ou no arquivo Excel que você baixar.</div>
+    </div>
+  </div>
+
+  <script>
+    // ====== CONFIG (licenciamento e loja) ======
+    const ALLOWED_USER = "SUA_LOJA_AQUI";       // usuário fixo do app admin
+    const DEFAULT_PASSWORD = "padrao1234";      // senha inicial (pode ser alterada)
+    const STORE_WHATS = "5514997792544";        // WhatsApp da loja (DDI 55 + DDD + número)
+    const STORE_NAME = "Sua Loja de Carros";    // nome para exibir no formulário público
+
+    // ====== Util ======
+    const el = (sel) => document.querySelector(sel);
+    const enc = (s) => encodeURIComponent(String(s || ''));
+    const telLimpo = (s) => String(s || '').replace(/\D+/g,'');
+    const numOrNull = (v) => { const n = Number(v); return Number.isFinite(n) ? n : null; };
+    const nowTS = () => new Date().toISOString().replace(/[:T]/g,'-').split('.')[0];
+    const uuid = () => (crypto?.randomUUID ? crypto.randomUUID() : 'id-' + Math.random().toString(36).slice(2));
+    function validaZapBR(z){ return /^55\d{10,11}$/.test(telLimpo(z)); }
+    function isFormMode(){ const p = new URLSearchParams(location.search); return p.has('form') || p.has('coleta'); }
+
+    // ====== Auth (usuário fixo) ======
+    const AUTH_KEY='crm_auth_v7';
+    const SESSION_KEY='crm_session_v7';
+    function hex(buf){return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');}
+    async function sha256Hex(str){ const enc = new TextEncoder().encode(str); const d= await crypto.subtle.digest('SHA-256', enc); return hex(d); }
+    function randomHex(n=16){ const a=new Uint8Array(n); crypto.getRandomValues(a); return [...a].map(b=>b.toString(16).padStart(2,'0')).join(''); }
+    function getAuth(){ try{ return JSON.parse(localStorage.getItem(AUTH_KEY)||''); }catch(e){ return null; } }
+    function setAuth(obj){ localStorage.setItem(AUTH_KEY, JSON.stringify(obj)); }
+    function isLogged(){ return !!sessionStorage.getItem(SESSION_KEY); }
+    function setLogged(){ sessionStorage.setItem(SESSION_KEY, String(Date.now())); }
+    function showApp(){ el('#loginView').style.display='none'; el('#app').style.display='block'; }
+    function showLogin(){ el('#loginView').style.display='flex'; el('#app').style.display='none'; }
+
+    async function ensureDefaultAuth(){ let auth = getAuth(); if (!auth){ const salt = randomHex(16); const hash = await sha256Hex(salt+':'+DEFAULT_PASSWORD); auth = { user: ALLOWED_USER, salt, hash, createdAt: Date.now() }; setAuth(auth); } else { if (auth.user !== ALLOWED_USER){ auth.user = ALLOWED_USER; setAuth(auth); } } }
+    async function initAuthUI(){ await ensureDefaultAuth(); const u = el('#lgUser'); u.value = ALLOWED_USER; const btnLogin = el('#btnLogin'); if (btnLogin) btnLogin.onclick = async ()=>{ const typedUser = el('#lgUser').value.trim(); const pass = el('#lgPass').value; if (typedUser !== ALLOWED_USER){ alert('Usuário não autorizado.'); return; } const auth = getAuth(); const hash = await sha256Hex(auth.salt+':'+pass); if (hash!==auth.hash){ alert('Senha incorreta.'); return; } setLogged(); showApp(); }; if (isLogged()) showApp(); else showLogin(); }
+
+    // ====== Conta (alterar senha) ======
+    function openAccount(){ const auth = getAuth(); if (!auth){ alert('Conta inválida.'); return; } el('#accountUser').textContent = ALLOWED_USER; el('#pwCur').value=''; el('#pwNew').value=''; el('#pwNew2').value=''; el('#accountModal').style.display='flex'; }
+    function closeAccount(){ el('#accountModal').style.display='none'; }
+    async function changePassword(){ const auth = getAuth(); if (!auth) return; const cur = el('#pwCur').value; const n1 = el('#pwNew').value; const n2 = el('#pwNew2').value; const hashCur = await sha256Hex(auth.salt+':'+cur); if (hashCur !== auth.hash){ alert('Senha atual incorreta.'); return; } if (!n1 || n1.length < 4){ alert('Nova senha muito curta.'); return; } if (n1 !== n2){ alert('Nova senha e confirmação não conferem.'); return; } const salt = randomHex(16); const hash = await sha256Hex(salt+':'+n1); setAuth({user: ALLOWED_USER, salt, hash}); alert('Senha alterada.'); closeAccount(); }
+
+    // ====== Persistência básica (admin) ======
+    const KEYS = { clientes: 'crm_clientes_v7', carros: 'crm_carros_v7' };
+    const read = (k) => JSON.parse(localStorage.getItem(k) || '[]');
+    const write = (k, v) => localStorage.setItem(k, JSON.stringify(v));
+    let clientes = read(KEYS.clientes);
+    let carros = read(KEYS.carros);
+    carros.forEach(c => { if (!c.id) c.id = uuid(); }); write(KEYS.carros, carros);
+
+    // ====== IndexedDB p/ fotos (admin) ======
+    const DB_NAME = 'crm_carros_db_v7'; const DB_VER = 1; let _db;
+    function openDB(){ return new Promise((resolve, reject)=>{ const req = indexedDB.open(DB_NAME, DB_VER); req.onupgradeneeded = (e)=>{ const db = e.target.result; if (!db.objectStoreNames.contains('photos')){ const store = db.createObjectStore('photos', {keyPath:'id'}); store.createIndex('carId', 'carId', {unique:false}); } }; req.onsuccess = ()=>{ _db = req.result; resolve(_db); }; req.onerror = ()=> reject(req.error); }); }
+    async function db(){ return _db || await openDB(); }
+    async function addPhotos(carId, files){ const dbi = await db(); const tx = dbi.transaction('photos','readwrite'); const store = tx.objectStore('photos'); for (const file of files){ const id = uuid(); store.put({ id, carId, name:file.name, type:file.type, size:file.size, createdAt:Date.now(), blob:file }); } }
+    async function getPhotosByCar(carId){ const dbi = await db(); const tx = dbi.transaction('photos','readonly'); const idx = tx.objectStore('photos').index('carId'); return new Promise((resolve,reject)=>{ const req = idx.getAll(carId); req.onsuccess=()=>resolve(req.result||[]); req.onerror=()=>reject(req.error); }); }
+    async function deletePhoto(photoId){ const dbi = await db(); const tx = dbi.transaction('photos','readwrite'); tx.objectStore('photos').delete(photoId); return new Promise((r)=>{tx.oncomplete=()=>r(true)}); }
+    function blobUrl(b){ return URL.createObjectURL(b); }
+
+    // ====== Matching (admin) ======
+    function compatível(c, car){ const eq=(a,b)=>String(a||'').toLowerCase()===String(b||'').toLowerCase(); const contains=(hay,needle)=>String(hay||'').toLowerCase().includes(String(needle||'').toLowerCase()); if (c.marca && !eq(c.marca, car.marca)) return false; if (c.modelo && !contains(car.modelo, c.modelo)) return false; if (c.tipo && !eq(c.tipo, car.tipo)) return false; if (c.anoMin && car.ano && Number(car.ano) < Number(c.anoMin)) return false; if (c.anoMax && car.ano && Number(car.ano) > Number(c.anoMax)) return false; if (c.precoMax && car.preco && Number(car.preco) > Number(c.precoMax)) return false; return true; }
+    function msgPadrao(car, cliente){ const preco = car.preco ? ` por R$ ${Number(car.preco).toLocaleString('pt-BR')}` : ''; const link = car.link ? `\n🔗 Detalhes: ${car.link}` : ''; return `Olá, ${cliente.nome}! 😊\nChegou ${car.marca} ${car.modelo} ${car.ano || ''}${preco} na nossa loja.\nVi que você tem interesse nesse perfil. Quer agendar uma visita ou fotos/vídeo?${link}\n\n— Equipe de Vendas`; }
+    function waLink(phone, text){ return `https://wa.me/${telLimpo(phone)}?text=${enc(text)}`; }
+
+    // ====== Render (admin) ======
+    function renderStats(){ const ativos = clientes.filter(c=>!c.jaComprou).length; const compr = clientes.length - ativos; el('#statsClientes').textContent = `${clientes.length} cliente(s) • ${ativos} ativos • ${compr} já compraram`; el('#statsCarros').textContent = `${carros.length} carro(s) no estoque`; }
+    function renderClientes(){ const box = el('#listaClientes'); const q = (el('#buscaCliente').value||'').toLowerCase().trim(); const list = clientes.filter(c=> !q || c.nome?.toLowerCase().includes(q) || telLimpo(c.zap).includes(q.replace(/\D+/g,'')) ); if (!list.length){ box.innerHTML = `<div class="muted">Nenhum cliente.</div>`; renderStats(); return; } box.innerHTML = list.map((c)=>{ const i = clientes.indexOf(c); const chips = []; if (c.marca) chips.push(`<span class="chip">Marca: ${c.marca}</span>`); if (c.modelo) chips.push(`<span class="chip">Modelo: ${c.modelo}</span>`); if (c.tipo) chips.push(`<span class="chip">Tipo: ${c.tipo}</span>`); if (c.anoMin) chips.push(`<span class="chip">Ano ≥ ${c.anoMin}</span>`); if (c.anoMax) chips.push(`<span class="chip">Ano ≤ ${c.anoMax}</span>`); if (c.precoMax) chips.push(`<span class="chip">Até R$ ${Number(c.precoMax).toLocaleString('pt-BR')}</span>`); if (c.jaComprou) chips.push(`<span class="chip">✅ Já comprou</span>`); return `<div class="item"><div class="head"><div><strong>${c.nome}</strong><div class="muted">WhatsApp: ${telLimpo(c.zap)}</div><div class="chips" style="margin-top:6px">${chips.join(' ')}</div><div class="row" style="margin-top:6px"><label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" ${c.jaComprou? 'checked':''} onchange="toggleComprou(${i}, this.checked)"/> Já comprou (não enviar)</label></div></div><div class="row"><button class="btn secondary" onclick="editarCliente(${i})">Editar</button><button class="btn danger" onclick="removerCliente(${i})">Remover</button></div></div></div>`; }).join(''); renderStats(); }
+    async function renderCarros(){ const box = el('#listaCarros'); const q = (el('#buscaCarro').value||'').toLowerCase().trim(); const fTipo = el('#fTipo').value; const fPreco = Number(el('#fPrecoMax').value)||null; const list = carros.filter(car=>{ const passQ = !q || car.marca?.toLowerCase().includes(q) || car.modelo?.toLowerCase().includes(q); const passT = !fTipo || car.tipo === fTipo; const passP = !fPreco || (car.preco||0) <= fPreco; return passQ && passT && passP; }); if (!list.length){ box.innerHTML = `<div class=muted>Nenhum carro no estoque.</div>`; renderStats(); return; } const htmls = await Promise.all(list.map(async (car)=>{ const interessados = clientes.map((c, cIdx)=>({c, cIdx})).filter(({c})=>compatível(c, car) && !c.jaComprou); const photos = await getPhotosByCar(car.id); const thumbs = photos.slice(0,6).map(p=>`<img class="thumb" src="${blobUrl(p.blob)}" title="${p.name}" />`).join(''); const chips = [`<span class="chip">${car.tipo}</span>`, car.ano ? `<span class="chip">Ano: ${car.ano}</span>` : '', car.preco ? `<span class="chip">R$ ${Number(car.preco).toLocaleString('pt-BR')}</span>` : '', ].join(' '); return `<div class="item"><div class="head"><div><strong>${car.marca} ${car.modelo}</strong><div class="chips" style="margin-top:6px">${chips}</div>${car.link ? `<div class="muted">🔗 <a href="${car.link}" target="_blank" rel="noopener">Abrir anúncio</a></div>` : ''}<div class="matches"><strong>${interessados.length}</strong> interessado(s) compatíveis</div></div><div class="row"><button class="btn secondary" onclick="editarCarro('${car.id}')">Editar</button><button class="btn danger" onclick="removerCarro('${car.id}')">Remover</button></div></div><div class="thumbs">${thumbs || '<span class=muted>Sem fotos</span>'}</div><div class="row" style="margin-top:8px"><label class="btn secondary" for="addFotos_${car.id}">Adicionar fotos</label><input id="addFotos_${car.id}" type="file" accept="image/*" multiple style="display:none" onchange="handleAddFotos(event, '${car.id}')" />${photos.length ? `<button class="btn secondary" onclick="gerenciarFotos('${car.id}')">Gerenciar fotos</button>`: ''}${photos.length ? `<button class="btn secondary" onclick="exportarFotosCar('${car.id}')">Exportar fotos do carro (.zip)</button>`: ''}</div><div class="row" style="margin-top:8px; flex-wrap: wrap">${interessados.map(({c})=>{ const link = waLink(c.zap, msgPadrao(car, c)); return `<a class="btn" href="${link}" target="_blank" rel="noopener">WhatsApp (texto) → ${c.nome.split(' ')[0]}</a>`; }).join('')}</div>${interessados.length ? `${photos.length ? `<div class="row" style="margin-top:8px"><button class="btn warn" onclick="compartilharComFotos('${car.id}')">Compartilhar c/ fotos (escolha WhatsApp)</button></div>` : ''}` : ''}</div>`; })); box.innerHTML = htmls.join(''); renderStats(); }
+
+    // ====== CRUD Clientes (admin) ======
+    let editClienteIdx = null;
+    function resetClienteForm(){ el('#cliNome').value=''; el('#cliZap').value=''; el('#cliMarca').value=''; el('#cliModelo').value=''; el('#cliTipo').value=''; el('#cliAnoMin').value=''; el('#cliAnoMax').value=''; el('#cliPrecoMax').value=''; const jc = document.getElementById('cliJaComprou'); if (jc) jc.checked = false; editClienteIdx=null; el('#btnAddCliente').textContent='Salvar cliente'; }
+    function salvarCliente(){ const c={ nome: el('#cliNome').value.trim(), zap: el('#cliZap').value.trim(), marca: el('#cliMarca').value.trim(), modelo: el('#cliModelo').value.trim(), tipo: el('#cliTipo').value, anoMin: numOrNull(el('#cliAnoMin').value), anoMax: numOrNull(el('#cliAnoMax').value), precoMax: numOrNull(el('#cliPrecoMax').value), jaComprou: !!(document.getElementById('cliJaComprou')?.checked) }; if (!c.nome || !c.zap) { alert('Informe nome e WhatsApp.'); return; } if (!validaZapBR(c.zap)) { alert('WhatsApp inválido. Formato: 55 + DDD + número.'); return; } const idxDup = clientes.findIndex(x => telLimpo(x.zap) === telLimpo(c.zap)); if (idxDup >= 0 && idxDup !== editClienteIdx) { if (!confirm('Já existe um cliente com esse WhatsApp. Deseja substituir?')) return; clientes[idxDup] = c; write(KEYS.clientes, clientes); resetClienteForm(); renderClientes(); renderCarros(); return; } if (editClienteIdx !== null) clientes[editClienteIdx]=c; else clientes.push(c); write(KEYS.clientes, clientes); resetClienteForm(); renderClientes(); renderCarros(); }
+    function editarCliente(idx){ const c=clientes[idx]; editClienteIdx=idx; el('#cliNome').value=c.nome||''; el('#cliZap').value=c.zap||''; el('#cliMarca').value=c.marca||''; el('#cliModelo').value=c.modelo||''; el('#cliTipo').value=c.tipo||''; el('#cliAnoMin').value=c.anoMin??''; el('#cliAnoMax').value=c.anoMax??''; el('#cliPrecoMax').value=c.precoMax??''; const jc = document.getElementById('cliJaComprou'); if (jc) jc.checked = !!c.jaComprou; el('#btnAddCliente').textContent='Atualizar cliente'; window.scrollTo({top:0, behavior:'smooth'}); }
+    function removerCliente(idx){ if (!confirm('Remover este cliente?')) return; clientes.splice(idx,1); write(KEYS.clientes, clientes); renderClientes(); renderCarros(); }
+    function toggleComprou(idx, val){ clientes[idx].jaComprou = !!val; write(KEYS.clientes, clientes); renderClientes(); renderCarros(); }
+
+    // ====== CRUD Carros (admin) ======
+    let editCarroId = null;
+    function resetCarroForm(){ el('#carMarca').value=''; el('#carModelo').value=''; el('#carTipo').value='Sedan'; el('#carAno').value=''; el('#carPreco').value=''; el('#carLink').value=''; el('#carFotos').value=''; editCarroId=null; el('#btnAddCarro').textContent='Salvar carro'; }
+    async function salvarCarro(){ const novo = { id: editCarroId || uuid(), marca: el('#carMarca').value.trim(), modelo: el('#carModelo').value.trim(), tipo: el('#carTipo').value, ano: numOrNull(el('#carAno').value), preco: numOrNull(el('#carPreco').value), link: el('#carLink').value.trim(), }; if (!novo.marca || !novo.modelo) { alert('Informe marca e modelo.'); return; } const dup = carros.findIndex(c => c.marca?.toLowerCase()===novo.marca.toLowerCase() && c.modelo?.toLowerCase()===novo.modelo.toLowerCase() && (c.ano||'')===(novo.ano||'') && (c.preco||'')===(novo.preco||'')); if (dup >= 0 && carros[dup].id !== novo.id){ if (!confirm('Carro possivelmente duplicado. Continuar mesmo assim?')) return; } if (editCarroId){ const i = carros.findIndex(c=>c.id===editCarroId); if (i>=0) carros[i]=novo; else carros.push(novo); } else { carros.push(novo); } write(KEYS.carros, carros); const files = el('#carFotos').files; if (files && files.length){ await addPhotos(novo.id, Array.from(files).slice(0,10)); } resetCarroForm(); renderCarros(); }
+    async function editarCarro(id){ const car = carros.find(c=>c.id===id); if (!car) return; editCarroId = id; el('#carMarca').value=car.marca||''; el('#carModelo').value=car.modelo||''; el('#carTipo').value=car.tipo||'Sedan'; el('#carAno').value=car.ano??''; el('#carPreco').value=car.preco??''; el('#carLink').value=car.link||''; el('#btnAddCarro').textContent='Atualizar carro'; window.scrollTo({top:0, behavior:'smooth'}); }
+    function removerCarro(id){ if (!confirm('Remover este carro? As fotos permanecem até você limpar o banco de fotos.')) return; carros = carros.filter(c=>c.id!==id); write(KEYS.carros, carros); renderCarros(); }
+    async function handleAddFotos(e, carId){ const files = e.target.files; if (!files?.length) return; await addPhotos(carId, files); renderCarros(); e.target.value=''; }
+    async function gerenciarFotos(carId){ const photos = await getPhotosByCar(carId); if (!photos.length){ alert('Este carro não tem fotos.'); return; } const names = photos.map((p,i)=>`${i+1}) ${p.name} (${Math.round(p.size/1024)} KB)`).join('\n'); const idx = prompt(`Fotos deste carro:\n${names}\n\nDigite o número da foto para remover (ou vazio p/ cancelar):`); const n = Number(idx); if (!Number.isFinite(n) || n<1 || n>photos.length) return; const alvo = photos[n-1]; if (confirm(`Remover a foto: ${alvo.name}?`)){ await deletePhoto(alvo.id); alert('Foto removida.'); renderCarros(); } }
+
+    // ====== Envio WhatsApp (admin) ======
+    async function compartilharComFotos(carId){ const car = carros.find(c=>c.id===carId); if (!car) return; const photos = await getPhotosByCar(carId); if (!photos.length){ alert('Este carro não tem fotos.'); return; } if (!navigator.share){ alert('Compartilhamento nativo não disponível neste dispositivo/navegador. Use o botão "WhatsApp (texto)" e anexe as fotos manualmente.'); return; } const files = photos.slice(0,10).map(p=> new File([p.blob], p.name, {type:p.type}) ); const text = `*${car.marca} ${car.modelo}* ${car.ano?('- '+car.ano):''}${car.preco?(' - R$ '+Number(car.preco).toLocaleString('pt-BR')):''}${car.link?('\n'+car.link):''}`; const payload = { text, files }; if (navigator.canShare && !navigator.canShare({files})) delete payload.files; try { await navigator.share(payload); } catch(err){ }
+    }
+
+    // ====== Backup (admin) ======
+    function exportarExcel(){ const clientesRows = clientes.map(c=>({ 'Nome': c.nome || '', 'WhatsApp': telLimpo(c.zap || ''), 'Marca': c.marca || '', 'Modelo': c.modelo || '', 'Tipo': c.tipo || '', 'AnoMin': c.anoMin ?? '', 'AnoMax': c.anoMax ?? '', 'PrecoMax': c.precoMax ?? '', 'JaComprou': c.jaComprou ? 1 : 0 })); const carrosRows = carros.map(car=>({ 'ID': car.id, 'Marca': car.marca || '', 'Modelo': car.modelo || '', 'Tipo': car.tipo || '', 'Ano': car.ano ?? '', 'Preco': car.preco ?? '', 'Link': car.link || '' })); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(clientesRows, {header:['Nome','WhatsApp','Marca','Modelo','Tipo','AnoMin','AnoMax','PrecoMax','JaComprou']}), 'Clientes'); XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(carrosRows, {header:['ID','Marca','Modelo','Tipo','Ano','Preco','Link']}), 'Carros'); XLSX.writeFile(wb, `backup_loja_carros_${nowTS()}.xlsx`); }
+    function importarExcel(file){ const reader = new FileReader(); reader.onload = (e)=>{ try{ const data = new Uint8Array(e.target.result); const wb = XLSX.read(data, {type:'array'}); let impC=0, impCar=0, dropC=0, dropCar=0; if (wb.Sheets['Clientes']){ const rows = XLSX.utils.sheet_to_json(wb.Sheets['Clientes'], {defval:''}); const arr = rows.map(r=>({ nome: String(r['Nome'] ?? '').trim(), zap: String(r['WhatsApp'] ?? '').trim(), marca: String(r['Marca'] ?? '').trim(), modelo: String(r['Modelo'] ?? '').trim(), tipo: String(r['Tipo'] ?? '').trim(), anoMin: r['AnoMin']!=='' ? Number(r['AnoMin']) : null, anoMax: r['AnoMax']!=='' ? Number(r['AnoMax']) : null, precoMax: r['PrecoMax']!=='' ? Number(r['PrecoMax']) : null, jaComprou: String(r['JaComprou']||'').toLowerCase()==='1' })); clientes = []; for (const c of arr){ if (c.nome && c.zap && validaZapBR(c.zap)) { clientes.push(c); impC++; } else { dropC++; } } write(KEYS.clientes, clientes); } if (wb.Sheets['Carros']){ const rows = XLSX.utils.sheet_to_json(wb.Sheets['Carros'], {defval:''}); const arr = rows.map(r=>({ id: String(r['ID']||'').trim() || uuid(), marca: String(r['Marca'] ?? '').trim(), modelo: String(r['Modelo'] ?? '').trim(), tipo: String(r['Tipo'] ?? '').trim(), ano: r['Ano']!=='' ? Number(r['Ano']) : null, preco: r['Preco']!=='' ? Number(r['Preco']) : null, link: String(r['Link'] ?? '').trim(), })); carros = []; for (const car of arr){ if (car.marca && car.modelo){ carros.push(car); impCar++; } else { dropCar++; } } write(KEYS.carros, carros); } renderClientes(); renderCarros(); alert(`Importação concluída.\nClientes: ${impC} ok, ${dropC} ignorados.\nCarros: ${impCar} ok, ${dropCar} ignorados.`); }catch(err){ console.error(err); alert('Falha ao importar o Excel. Verifique abas e colunas.'); } }; reader.readAsArrayBuffer(file); }
+
+    // ====== Formulário público: gerar link/QR (admin) ======
+    function publicFormURL(){ const base = location.origin + location.pathname; return `${base}?form=1`; }
+    function openFormModal(){ const url = publicFormURL(); el('#formLinkInput').value = url; const canvas = el('#qrCanvas'); QRCode.toCanvas(canvas, url, {width:280, margin:2}); el('#formModal').style.display='flex'; }
+    function closeFormModal(){ el('#formModal').style.display='none'; }
+
+    // ====== FORMULÁRIO PÚBLICO (coleta) ======
+    function showPublicForm(){ document.body.scrollIntoView(); el('#loginView').style.display='none'; el('#app').style.display='none'; el('#publicForm').style.display='block'; el('#pfLoja').innerHTML = `Os dados serão enviados para <strong>${STORE_NAME}</strong>.`; }
+    function pfRow(){ return { 'Nome': el('#pfNome').value.trim(), 'WhatsApp': telLimpo(el('#pfZap').value.trim()), 'Marca': el('#pfMarca').value.trim(), 'Modelo': el('#pfModelo').value.trim(), 'Tipo': el('#pfTipo').value, 'AnoMin': el('#pfAnoMin').value ? Number(el('#pfAnoMin').value) : '', 'AnoMax': el('#pfAnoMax').value ? Number(el('#pfAnoMax').value) : '', 'PrecoMax': el('#pfPrecoMax').value ? Number(el('#pfPrecoMax').value) : '', 'JaComprou': 0 }; }
+    function pfValidate(){ const r = pfRow(); if (!r['Nome']){ alert('Informe seu nome.'); return null; } if (!r['WhatsApp'] || !validaZapBR(r['WhatsApp'])){ alert('Informe um WhatsApp válido (DDI 55 + DDD + número, só dígitos).'); return null; } return r; }
+    function pfWhatsMessage(r){ const prefs = [`Marca: ${r['Marca']||'-'}`, `Modelo: ${r['Modelo']||'-'}`, `Tipo: ${r['Tipo']||'-'}`, `Ano: ${r['AnoMin']||'-'} a ${r['AnoMax']||'-'}`, `Preço máx.: ${r['PrecoMax']?('R$ '+Number(r['PrecoMax']).toLocaleString('pt-BR')):'-'}\n`].join('\n'); return `Novo cadastro de interesse:%0A%0A*Nome:* ${enc(r['Nome'])}%0A*WhatsApp:* ${enc(r['WhatsApp'])}%0A${enc(prefs)}%0AEnviado via formulário público.`; }
+    function pfSendWhats(){ const r = pfValidate(); if (!r) return; const url = `https://wa.me/${STORE_WHATS}?text=${pfWhatsMessage(r)}`; window.location.href = url; }
+    function pfDownloadExcel(){ const r = pfValidate(); if (!r) return; const wb = XLSX.utils.book_new(); const ws = XLSX.utils.json_to_sheet([r], {header:['Nome','WhatsApp','Marca','Modelo','Tipo','AnoMin','AnoMax','PrecoMax','JaComprou']}); XLSX.utils.book_append_sheet(wb, ws, 'Clientes'); XLSX.writeFile(wb, `cliente_preferencias_${nowTS()}.xlsx`); }
+
+    // ====== Listeners ======
+    document.addEventListener('DOMContentLoaded', ()=>{
+      // Admin listeners
+      el('#btnAccount')?.addEventListener('click', openAccount);
+      el('#btnLogout')?.addEventListener('click', ()=>{ sessionStorage.removeItem(SESSION_KEY); showLogin(); });
+      el('#btnCloseAccount')?.addEventListener('click', closeAccount);
+      el('#btnChangePw')?.addEventListener('click', changePassword);
+      el('#btnFormLink')?.addEventListener('click', openFormModal);
+      el('#btnCloseForm')?.addEventListener('click', closeFormModal);
+      el('#btnCopyForm')?.addEventListener('click', ()=>{ navigator.clipboard.writeText(el('#formLinkInput').value); alert('Link copiado!');});
+
+      // CRUD listeners
+      el('#btnAddCliente')?.addEventListener('click', salvarCliente);
+      el('#btnLimparCliente')?.addEventListener('click', resetClienteForm);
+      el('#btnApagarClientes')?.addEventListener('click', ()=>{ if (!confirm('Apagar TODOS os clientes?')) return; clientes=[]; write(KEYS.clientes, clientes); renderClientes(); renderCarros(); });
+      el('#btnAddCarro')?.addEventListener('click', salvarCarro);
+      el('#btnLimparCarro')?.addEventListener('click', resetCarroForm);
+      el('#btnApagarCarros')?.addEventListener('click', ()=>{ if (!confirm('Apagar TODOS os carros?')) return; carros=[]; write(KEYS.carros, carros); renderCarros(); });
+      el('#buscaCliente')?.addEventListener('input', renderClientes);
+      el('#buscaCarro')?.addEventListener('input', renderCarros);
+      el('#fTipo')?.addEventListener('change', renderCarros);
+      el('#fPrecoMax')?.addEventListener('input', renderCarros);
+      el('#btnExportExcel')?.addEventListener('click', exportarExcel);
+      el('#impExcel')?.addEventListener('change', (e)=>{ const f=e.target.files?.[0]; if (!f) return; importarExcel(f); e.target.value=''; });
+      el('#btnZipFotos')?.addEventListener('click', async()=>{ const zip = new JSZip(); const folder = zip.folder('fotos'); for (const car of carros){ const photos = await getPhotosByCar(car.id); if (!photos.length) continue; const dir = folder.folder(car.id); for (const p of photos){ dir.file(p.name, p.blob); } } const blob = await zip.generateAsync({type:'blob'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href=url; a.download=`fotos_${nowTS()}.zip`; a.click(); URL.revokeObjectURL(url); });
+      el('#impZipFotos')?.addEventListener('change', async (e)=>{ const file=e.target.files?.[0]; if (!file) return; const zip = await JSZip.loadAsync(file); let ok=0, skip=0; const tasks=[]; zip.forEach((path, entry)=>{ if (entry.dir) return; const parts = path.split('/'); if (parts.length<3 || parts[0]!== 'fotos') { skip++; return; } const carId = parts[1]; if (!carros.find(c=>c.id===carId)) { skip++; return; } tasks.push(entry.async('blob').then(blob=>{ const recFile = new File([blob], parts.slice(2).join('_') || 'foto.jpg', {type: blob.type||'image/jpeg'}); return addPhotos(carId, [recFile]).then(()=> ok++); })); }); await Promise.all(tasks); alert(`Importação de fotos: ${ok} adicionadas, ${skip} ignoradas.`); renderCarros(); e.target.value=''; });
+
+      // Form público listeners
+      el('#pfEnviarZap')?.addEventListener('click', pfSendWhats);
+      el('#pfBaixarExcel')?.addEventListener('click', pfDownloadExcel);
+    });
+
+    // ====== Boot ======
+    (async function(){
+      if (isFormMode()){
+        showPublicForm();
+      } else {
+        await db(); // IndexedDB (apenas admin)
+        await initAuthUI();
+        renderClientes(); renderCarros();
+      }
+    })();
+  </script>
+</body>
+</html>
